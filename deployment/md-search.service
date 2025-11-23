@@ -1,0 +1,37 @@
+[Unit]
+Description=Markdown Search Engine
+After=network.target
+
+[Service]
+Type=notify
+User=mdsearch
+Group=mdsearch
+WorkingDirectory=/opt/md-search
+Environment="PATH=/opt/md-search/venv/bin"
+EnvironmentFile=/opt/md-search/.env
+
+# 启动命令
+ExecStart=/opt/md-search/venv/bin/uvicorn app.main:app \
+    --host 0.0.0.0 \
+    --port 8000 \
+    --workers 4 \
+    --log-level info
+
+# 重启策略
+Restart=always
+RestartSec=10
+
+# 安全加固
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/md-search/data
+
+# 资源限制
+LimitNOFILE=65536
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Markdown 搜索引擎{% endblock %}</title>
+    <link rel="stylesheet" href="/static/style.css">
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1><a href="/">📚 Markdown 搜索引擎</a></h1>
+        </div>
+    </header>
+    
+    <main class="container">
+        {% block content %}{% endblock %}
+    </main>
+    
+    <footer>
+        <div class="container">
+            <p>&copy; 2024 Markdown Search Engine | Powered by FastAPI & SQLite FTS5</p>
+        </div>
+    </footer>
+    
+    <script src="/static/script.js"></script>
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>

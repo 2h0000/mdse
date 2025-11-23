@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}搜索 - Markdown 搜索引擎{% endblock %}
+
+{% block content %}
+<div class="search-page">
+    <div class="search-box">
+        <form id="search-form" action="/" method="get">
+            <input 
+                type="text" 
+                id="search-input" 
+                name="q" 
+                placeholder="搜索 Markdown 文档..." 
+                value="{{ query or '' }}"
+                autofocus
+            >
+            <button type="submit">🔍 搜索</button>
+        </form>
+    </div>
+
+    {% if query %}
+    <div class="search-results">
+        <div class="results-header">
+            <h2>搜索结果</h2>
+            <p class="results-info">
+                找到 <strong>{{ total }}</strong> 个结果，显示第 {{ offset + 1 }} - {{ min(offset + results|length, total) }} 个
+            </p>
+        </div>
+
+        {% if results %}
+        <div class="results-list">
+            {% for result in results %}
+            <div class="result-item" data-doc-id="{{ result.id }}">
+                <h3 class="result-title">
+                    <a href="#" class="doc-link" data-doc-id="{{ result.id }}">
+                        {{ result.title }}
+                    </a>
+                </h3>
+                <p class="result-path">{{ result.path }}</p>
+                <p class="result-snippet">{{ result.snippet | safe }}</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- 分页 -->
+        {% if total > limit %}
+        <div class="pagination">
+            {% if offset > 0 %}
+            <a href="/?q={{ query }}&limit={{ limit }}&offset={{ max(0, offset - limit) }}" class="page-link">
+                ← 上一页
+            </a>
+            {% endif %}
+            
+            <span class="page-info">
+                第 {{ (offset // limit) + 1 }} / {{ (total + limit - 1) // limit }} 页
+            </span>
+            
+            {% if offset + limit < total %}
+            <a href="/?q={{ query }}&limit={{ limit }}&offset={{ offset + limit }}" class="page-link">
+                下一页 →
+            </a>
+            {% endif %}
+        </div>
+        {% endif %}
+        {% else %}
+        <div class="no-results">
+            <p>😔 没有找到匹配的结果</p>
+            <p class="hint">尝试使用不同的关键词或检查拼写</p>
+        </div>
+        {% endif %}
+    </div>
+    {% else %}
+    <div class="welcome">
+        <h2>欢迎使用 Markdown 搜索引擎</h2>
+        <p>在上方输入关键词开始搜索您的文档</p>
+    </div>
+    {% endif %}
+
+    <!-- 文档预览区域 -->
+    <div id="doc-preview" class="doc-preview hidden">
+        <div class="preview-header">
+            <h3 id="preview-title">文档预览</h3>
+            <button id="close-preview" class="close-btn">✕</button>
+        </div>
+        <div id="preview-content" class="preview-content">
+            <p class="loading">加载中...</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    // 初始化搜索页面交互
+    document.addEventListener('DOMContentLoaded', function() {
+        initSearchPage();
+    });
+</script>
+{% endblock %}

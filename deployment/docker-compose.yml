@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  md-search:
+    build:
+      context: ..
+      dockerfile: deployment/Dockerfile
+    container_name: md-search
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      # 挂载 Markdown 文档目录（只读）
+      - /path/to/your/markdown/docs:/docs:ro
+      # 挂载数据目录（读写）
+      - ./data:/app/data
+    environment:
+      - MD_ROOT=/docs
+      - DB_PATH=/app/data/md_search.db
+      - LOG_LEVEL=INFO
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - md-search-network
+
+  # 可选：Nginx 反向代理
+  # nginx:
+  #   image: nginx:alpine
+  #   container_name: md-search-nginx
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - md-search
+  #   networks:
+  #     - md-search-network
+
+networks:
+  md-search-network:
+    driver: bridge
+
+volumes:
+  data:
+    driver: local
