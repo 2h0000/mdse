@@ -1,4 +1,4 @@
-# Markdown 搜索引擎
+# 🔍MDSE-Markdown 搜索引擎
 
 基于 Python 的 Markdown 文档全文搜索引擎，使用 FastAPI + SQLite FTS5 实现快速全文检索。
 
