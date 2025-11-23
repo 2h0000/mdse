@@ -187,7 +187,10 @@ async def search(
 
 
 @router.get("/docs/{doc_id}", response_class=HTMLResponse)
-async def get_document(doc_id: int):
+async def get_document(
+    doc_id: int,
+    q: Optional[str] = Query(None, description="搜索关键词，用于高亮显示")
+):
     """文档详情端点
     
     根据文档 ID 返回完整的 HTML 格式文档内容。
@@ -198,6 +201,7 @@ async def get_document(doc_id: int):
     
     Args:
         doc_id: 文档 ID
+        q: 搜索关键词（可选），用于在文档中高亮显示
         
     Returns:
         HTMLResponse: HTML 格式的文档内容
@@ -231,5 +235,131 @@ async def get_document(doc_id: int):
             status_code=404,
             detail=f"Document file not found on disk: {document.path}"
         )
+    
+    # 如果提供了搜索关键词，在 HTML 中高亮显示
+    if q and q.strip():
+        import re
+        
+        query = q.strip()
+        
+        # 智能提取关键词，按优先级排序
+        # 优先级：完整查询 > 词组片段 > 单个字符
+        keywords_by_priority = []
+        
+        # 1. 完整查询（最高优先级）
+        # 移除多余空格，但保留中文词组
+        full_query = ' '.join(query.split())
+        if full_query:
+            keywords_by_priority.append(('full', full_query))
+        
+        # 2. 提取词组片段（中等优先级）
+        # 按空格分割，每个片段作为一个词组
+        phrases = []
+        current_phrase = []
+        
+        for char in query:
+            if char in ' \t\n\r':
+                if current_phrase:
+                    phrase = ''.join(current_phrase)
+                    if len(phrase) > 1:  # 只保留多字符词组
+                        phrases.append(phrase)
+                    current_phrase = []
+            else:
+                current_phrase.append(char)
+        
+        if current_phrase:
+            phrase = ''.join(current_phrase)
+            if len(phrase) > 1:
+                phrases.append(phrase)
+        
+        # 添加词组到关键词列表
+        for phrase in phrases:
+            keywords_by_priority.append(('phrase', phrase))
+        
+        # 3. 提取单个字符（最低优先级）
+        # 只在没有找到完整匹配时才使用
+        single_chars = []
+        for char in query:
+            is_cjk = '\u4e00' <= char <= '\u9fff'
+            if is_cjk:
+                single_chars.append(char)
+            elif char.isalnum():
+                # 英文字符不单独作为关键词
+                pass
+        
+        # 去重单字符
+        single_chars = list(set(single_chars))
+        for char in single_chars:
+            keywords_by_priority.append(('char', char))
+        
+        # 按优先级高亮
+        # 使用占位符避免重复高亮
+        MARK_PLACEHOLDER = '___MARK_START___'
+        MARK_END_PLACEHOLDER = '___MARK_END___'
+        
+        # 先高亮完整查询和词组
+        for priority, keyword in keywords_by_priority:
+            if priority in ['full', 'phrase']:
+                # 转义特殊字符
+                escaped_keyword = re.escape(keyword)
+                
+                # 检查是否包含中文
+                has_chinese = any('\u4e00' <= c <= '\u9fff' for c in keyword)
+                
+                if has_chinese:
+                    # 中文词组：直接匹配
+                    pattern = re.compile(f'({escaped_keyword})', re.IGNORECASE)
+                else:
+                    # 英文词组：使用词边界
+                    pattern = re.compile(f'\\b({escaped_keyword})\\b', re.IGNORECASE)
+                
+                # 替换为占位符（避免重复高亮）
+                def replace_with_placeholder(match):
+                    # 检查是否已经被标记
+                    text_before = html_content[:match.start()]
+                    if MARK_PLACEHOLDER in text_before[max(0, len(text_before)-50):]:
+                        last_start = text_before.rfind(MARK_PLACEHOLDER)
+                        last_end = text_before.rfind(MARK_END_PLACEHOLDER)
+                        if last_start > last_end:
+                            return match.group(0)
+                    
+                    # 检查是否在 HTML 标签内
+                    open_tags = text_before.count('<') - text_before.count('>')
+                    if open_tags > 0:
+                        return match.group(0)
+                    
+                    return f'{MARK_PLACEHOLDER}{match.group(1)}{MARK_END_PLACEHOLDER}'
+                
+                html_content = pattern.sub(replace_with_placeholder, html_content)
+        
+        # 检查是否有高亮内容
+        has_highlights = MARK_PLACEHOLDER in html_content
+        
+        # 如果没有找到完整匹配，才使用单字符高亮
+        if not has_highlights:
+            for priority, keyword in keywords_by_priority:
+                if priority == 'char':
+                    escaped_keyword = re.escape(keyword)
+                    pattern = re.compile(f'({escaped_keyword})', re.IGNORECASE)
+                    
+                    def replace_char(match):
+                        text_before = html_content[:match.start()]
+                        if MARK_PLACEHOLDER in text_before[max(0, len(text_before)-50):]:
+                            last_start = text_before.rfind(MARK_PLACEHOLDER)
+                            last_end = text_before.rfind(MARK_END_PLACEHOLDER)
+                            if last_start > last_end:
+                                return match.group(0)
+                        
+                        open_tags = text_before.count('<') - text_before.count('>')
+                        if open_tags > 0:
+                            return match.group(0)
+                        
+                        return f'{MARK_PLACEHOLDER}{match.group(1)}{MARK_END_PLACEHOLDER}'
+                    
+                    html_content = pattern.sub(replace_char, html_content)
+        
+        # 将占位符替换为真实的 mark 标签
+        html_content = html_content.replace(MARK_PLACEHOLDER, '<mark>')
+        html_content = html_content.replace(MARK_END_PLACEHOLDER, '</mark>')
     
     return HTMLResponse(content=html_content)

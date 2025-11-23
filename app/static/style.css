@@ -171,6 +171,29 @@ main {
     font-weight: 500;
 }
 
+/* 文档预览中的高亮样式 */
+.preview-content mark,
+.doc-content mark {
+    background-color: #fef08a;
+    padding: 0.2rem 0.3rem;
+    border-radius: 3px;
+    font-weight: 500;
+    box-shadow: 0 0 0 2px rgba(254, 240, 138, 0.3);
+    animation: highlight-pulse 0.5s ease-in-out;
+}
+
+@keyframes highlight-pulse {
+    0% {
+        background-color: #fef08a;
+    }
+    50% {
+        background-color: #fde047;
+    }
+    100% {
+        background-color: #fef08a;
+    }
+}
+
 /* 分页样式 */
 .pagination {
     display: flex;

@@ -67,8 +67,18 @@ async function showDocumentPreview(docId) {
     previewTitle.textContent = '文档预览';
 
     try {
+        // 获取当前搜索关键词（从搜索框或 URL 参数）
+        const searchInput = document.getElementById('search-input');
+        const searchQuery = searchInput ? searchInput.value : '';
+        
+        // 构建 URL，如果有搜索关键词则添加到参数中
+        let url = `/docs/${docId}`;
+        if (searchQuery && searchQuery.trim()) {
+            url += `?q=${encodeURIComponent(searchQuery.trim())}`;
+        }
+        
         // 获取文档内容
-        const response = await fetch(`/docs/${docId}`);
+        const response = await fetch(url);
         
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
@@ -87,6 +97,12 @@ async function showDocumentPreview(docId) {
 
         // 平滑滚动到顶部
         previewContent.scrollTop = 0;
+        
+        // 如果有高亮的内容，滚动到第一个高亮位置
+        const firstMark = previewContent.querySelector('mark');
+        if (firstMark) {
+            firstMark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
 
     } catch (error) {
         console.error('Failed to load document:', error);
