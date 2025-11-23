@@ -1,0 +1,8 @@
+# 自动标准化行尾符
+* text=auto
+
+# Shell 脚本始终使用 LF
+*.sh text eol=lf
+
+# 环境配置文件使用 LF
+.env* text eol=lf
